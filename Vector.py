@@ -1,6 +1,5 @@
 import math
 import random
-from random import uniform
 from typing import Collection
 
 
@@ -71,7 +70,7 @@ class Vector:
         """To get the norm of the vector"""
         return math.sqrt(sum([x * x for x in self.coords]))
 
-    def normalize(self):
+    def normalize(self) -> Vector:
         """Returns a normalized unit vector"""
         norm = self.norm()
         return Vector(*tuple([x / norm for x in self.coords]))
@@ -85,6 +84,23 @@ class Vector:
                 if self.coords[i] * other.coords[j] != self.coords[j] * other.coords[i]:
                     return False
         return True
+
+
+def vector_from_dots(dot1: Collection, dot2: Collection) -> Vector:
+    """Creates a vector from two given points"""
+    if len(dot1) != len(dot2):
+        raise ValueError("The two given dots must belong to the same dimension. "
+                         "One is {}-dimensional, while the other is {}-dimensional".format(len(dot1), len(dot2)))
+    return Vector(*tuple(dot1)) - Vector(*tuple(dot2))
+
+
+def generate_random_unit_vect(dims: int = 2, seed: int = None) -> Vector:
+    """Generate a unit vector of dimensions dims in a random direction."""
+    if dims < 1:
+        raise ValueError("The dimension of the vector must be at least 1")
+    random.seed(seed)
+    vec = [random.gauss(0, 1) for _ in range(dims)]
+    return Vector(*vec).normalize()
 
 
 class Vector2D(Vector):
@@ -104,23 +120,8 @@ class Vector2D(Vector):
         return math.atan(self.coords[1] / self.coords[0])
 
 
-def vector_from_dots(dot1: Collection, dot2: Collection) -> Vector:
-    """Creates a vector from two given points"""
-    if len(dot1) != len(dot2):
-        raise ValueError("The two given dots must belong to the same dimension. "
-                         "One is {}-dimensional, while the other is {}-dimensional".format(len(dot1), len(dot2)))
-    return Vector(*tuple(dot1)) - Vector(*tuple(dot2))
-
-
 def vector_from_magdir(direction: float = 0., magnitude: float = 1.) -> Vector2D:
     """Creates a vector of direction and magnitude"""
     x = magnitude * math.cos(direction)
     y = magnitude * math.sin(direction)
     return Vector2D(x, y)
-
-
-def generate_random_unit_2d_vect(seed: int = None) -> Vector2D:
-    """Generate a 2d unit vector in a random direction."""
-    random.seed(seed)
-    direction = uniform(0, 2 * math.pi)
-    return Vector2D(math.cos(direction), math.sin(direction))
