@@ -19,7 +19,7 @@ Example of Perlin Noise generation in 3D :
 
 ## [Worley noise](https://en.wikipedia.org/wiki/Worley_noise)
 
-- [x] Worley noise - class WorneyNoise
+- [x] Worley noise - class WorleyNoise
 - [ ] Worley noise 1D
 - [ ] Worley noise 3D
 

@@ -324,7 +324,7 @@ class PerlinNoise3D(Noise):
                                for coord_z in range(self.size)])
 
 
-class WorneyNoise(Noise):
+class WorleyNoise(Noise):
     def __init__(self, size: int, nbr_control_point: int, seed: int = None):
         """
         :param size: The size of the noise to generate (in pixel)
@@ -375,10 +375,10 @@ class SimplexNoise(Noise):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worney'], default='perlin2d')
+    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley'], default='perlin2d')
     parser.add_argument('--size', type=int, default=100)
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--ncp', type=int, default=10)  # Number of control points for Worney noise
+    parser.add_argument('--ncp', type=int, default=10)  # Number of control points for Worley noise
     parser.add_argument('--gs', type=int, default=10)  # Grid size for Perlin noise
     args = parser.parse_args()
     if args.noise == 'perlin1d':
@@ -387,8 +387,8 @@ if __name__ == '__main__':
         noise = PerlinNoise2D(size=args.size, grid_size=args.gs, seed=args.seed)
     elif args.noise == 'perlin3d':
         noise = PerlinNoise3D(size=args.size, grid_size=args.gs, seed=args.seed)
-    elif args.noise == 'worney':
-        noise = WorneyNoise(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
+    elif args.noise == 'worley':
+        noise = WorleyNoise(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
     else:
         raise ValueError(f"Noise type {args.noise} not supported")
 
