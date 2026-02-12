@@ -4,28 +4,38 @@ This project aims to explore and to test several noise generation algorithms. So
 
 ## [Perlin Noise](https://en.wikipedia.org/wiki/Perlin_noise)
 
+Ken Perlin developed Perlin noise in 1982. It helps to generate terrain (height maps) and natural textures.
+The main steps of his algorithm are :
+1. Grid definition: define a grid and associate a random vector with each corner of the grid
+2. Dot product: compute the dot product between the closest corners of the grid and the offest vectors relative to these corners
+3. Interpolation: Smooth the result of the dot products
+
 - [x] Perlin noise 1D - class PerlinNoise1D
 - [x] Perlin noise 2D - class PerlinNoise2D
 - [x] Perlin noise 3D - class PerlinNoise3D
 - [ ] [Perlin noise with octaves](https://rtouti.github.io/graphics/perlin-noise-algorithm)
 
-Example of Perlin Noise generation in 2D :
+Example of Perlin Noise generation in 2D and 3D:
 
-<img width="640" height="480" alt="Perlin_noise_2d" src="https://github.com/user-attachments/assets/c16c21f2-b8a0-40f6-ac1a-271c3c907b8d" />
-
-Example of Perlin Noise generation in 3D :
-
-![Perlin_noise_3d](https://github.com/user-attachments/assets/ac555040-d0c2-4b54-a2ac-f37840cfb4a2)
+<img src="images_example/100px_PerlinNoise2D_2D.png" width="320" height="240"/>
+<img src="images_example/100px_PerlinNoise3D_3D.gif" width="320" height="240"/>
 
 ## [Worley noise](https://en.wikipedia.org/wiki/Worley_noise)
 
+Steven Worley his noise generation algorithm in 1996, also called **Voronoi noise** or **Cellular noise**. 
+It is used to generate textures.
+The main steps of his algorithm are :
+1. Create N control points (N is a parameter to choose)
+2. For each point, find the closest control point and compute the distance between the point and the control point
+
 - [x] Worley noise - class WorleyNoise
-- [ ] Worley noise 1D
-- [ ] Worley noise 3D
+- [x] Worley noise 1D
+- [x] Worley noise 3D
 
-Example of Worley Noise generation in 2D :
+Example of Worley Noise generation in 2D and 3D :
 
-<img width="640" height="480" alt="Figure_1" src="https://github.com/user-attachments/assets/4cb3b57f-08d8-4c77-a7f9-d0208d85f832" />
+<img src="images_example/100px_WorleyNoise_2D.png" width="320" height="240"/>
+<img src="images_example/100px_WorleyNoise_3D.gif" width="320" height="240"/>
 
 
 ## [Simplex noise](https://en.wikipedia.org/wiki/Simplex_noise)
