@@ -1,6 +1,7 @@
 import argparse
 import math
 import random
+from typing import Collection
 
 import numpy as np
 from matplotlib import pyplot as plt, animation
@@ -8,7 +9,7 @@ from matplotlib import pyplot as plt, animation
 from Vector import vector_from_dots, generate_random_unit_vect
 
 
-def distance(pt1: tuple, pt2: tuple, p: int = 2) -> float:
+def distance(pt1: Collection, pt2: Collection, p: int = 2) -> float:
     """
     Compute the Minkowski distance of order P between two points in any dimension.
     :param pt1: Coordinates of the first point
@@ -16,9 +17,12 @@ def distance(pt1: tuple, pt2: tuple, p: int = 2) -> float:
     :param p: Parameter of the norm. Defaults to 2 (Euclidean distance)
     :return: The distance between the two points, using the p-norm
     """
-    if len(pt1) != len(pt2):
-        raise ValueError(f"The two points must have the same dimension, got {len(pt1)} and {len(pt1)} instead")
-    return sum([(c1 - c2) ** p for c1, c2 in zip(pt1, pt2)]) ** (1 / p)
+    if isinstance(pt1, Collection) and isinstance(pt2, Collection):
+        if len(pt1) != len(pt2):
+            raise ValueError(f"The two points must have the same dimension, got {len(pt1)} and {len(pt2)} instead")
+        return sum([(c1 - c2) ** p for c1, c2 in zip(pt1, pt2)]) ** (1 / p)
+    else:
+        raise ValueError(f"The two points must be collections of numbers, got {type(pt1)} and {type(pt2)} instead")
 
 
 class Noise:
@@ -325,27 +329,31 @@ class PerlinNoise3D(Noise):
 
 
 class WorleyNoise(Noise):
-    def __init__(self, size: int, nbr_control_point: int, seed: int = None):
+    def __init__(self, size: int, dims: int, nbr_control_point: int, seed: int = None):
         """
         :param size: The size of the noise to generate (in pixel)
         :param nbr_control_point: Number of control points to use to generate the noise.
+        :param dims: Number of dimensions of the noise to generate (must be 1,2 or 3)
         :param seed: To make generation reproducible
         """
         super().__init__(size=size)
         self.control_points: list[tuple[int, int]] = []
-        self.generate_control_points(nbr_control_point, seed=seed)
+        self.dims = dims
+        self.generate_control_points(dims, nbr_control_point, seed=seed)
 
-    def generate_control_points(self, nbr_control_point, seed: int = None):
+    def generate_control_points(self, dims: int, nbr_control_point: int, seed: int = None):
         """Generate nbr_control_point random control points"""
         random.seed(seed)
         for _ in range(nbr_control_point):
-            random_x = random.randint(0, self.size)
-            random_y = random.randint(0, self.size)
-            self.control_points.append((random_x, random_y))
+            dim_control_point = []
+            for d in range(dims):
+                random_d = random.randint(0, self.size)
+                dim_control_point.append(random_d)
+            self.control_points.append(tuple(dim_control_point))
 
-    def get_closer_control_point(self, coord: tuple[int, int]) -> float:
+    def get_closer_control_point(self, coord) -> float:
         """Return the distance to the closest control point"""
-        closest_dist = math.sqrt(self.size ** 2 + self.size ** 2)
+        closest_dist = np.inf
         for control_p in self.control_points:
             dist = distance(coord, control_p)
             if dist < closest_dist:
@@ -354,9 +362,21 @@ class WorleyNoise(Noise):
         return closest_dist
 
     def generate(self):
-        self.noise = np.array(
-            [[self.get_closer_control_point((coord_x, coord_y)) for coord_x in range(self.size)]
-             for coord_y in range(self.size)])
+        if self.dims == 1:
+            self.noise = np.array([self.get_closer_control_point((c,)) for c in range(self.size)])
+        elif self.dims == 2:
+            self.noise = np.array(
+                [[self.get_closer_control_point((coord_x, coord_y))
+                  for coord_x in range(self.size)]
+                 for coord_y in range(self.size)])
+        elif self.dims == 3:
+            self.noise = np.array(
+                [[[self.get_closer_control_point((coord_x, coord_y, coord_z))
+                   for coord_x in range(self.size)]
+                  for coord_y in range(self.size)]
+                 for coord_z in range(self.size)])
+        else:
+            raise ValueError(f"Cannot generate noise of dimension {self.dims}")
 
 
 class SimplexNoise(Noise):
@@ -375,7 +395,8 @@ class SimplexNoise(Noise):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley'], default='perlin2d')
+    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley1d', 'worley2d', 'worley3d'],
+                        default='perlin2d')
     parser.add_argument('--size', type=int, default=100)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--ncp', type=int, default=10)  # Number of control points for Worley noise
@@ -387,8 +408,12 @@ if __name__ == '__main__':
         noise = PerlinNoise2D(size=args.size, grid_size=args.gs, seed=args.seed)
     elif args.noise == 'perlin3d':
         noise = PerlinNoise3D(size=args.size, grid_size=args.gs, seed=args.seed)
-    elif args.noise == 'worley':
-        noise = WorleyNoise(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
+    elif args.noise == 'worley1d':
+        noise = WorleyNoise(size=args.size, dims=1, nbr_control_point=args.ncp, seed=args.seed)
+    elif args.noise == 'worley2d':
+        noise = WorleyNoise(size=args.size, dims=2, nbr_control_point=args.ncp, seed=args.seed)
+    elif args.noise == 'worley3d':
+        noise = WorleyNoise(size=args.size, dims=3, nbr_control_point=args.ncp, seed=args.seed)
     else:
         raise ValueError(f"Noise type {args.noise} not supported")
 
