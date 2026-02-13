@@ -13,7 +13,7 @@ The main steps of his algorithm are :
 - [x] Perlin noise 1D - class PerlinNoise1D
 - [x] Perlin noise 2D - class PerlinNoise2D
 - [x] Perlin noise 3D - class PerlinNoise3D
-- [ ] [Perlin noise with octaves](https://rtouti.github.io/graphics/perlin-noise-algorithm)
+- [x] [Perlin noise with octaves](https://rtouti.github.io/graphics/perlin-noise-algorithm)
 
 Example of Perlin Noise generation in 2D and 3D:
 

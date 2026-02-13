@@ -103,6 +103,8 @@ class Noise:
             raise ValueError(f"Noise representation for type {type(self.noise)} not supported")
 
 
+# region Perlin noise
+
 class PerlinNoise1D(Noise):
     def __init__(self, size: int, grid_size: int, seed: int = None):
         """
@@ -271,6 +273,43 @@ class PerlinNoise3D(Noise):
         self.noise = self.interpolate_fctn(w, interpol_y1, interpol_y2)
 
 
+class PerlinOctave(Noise):
+    def __init__(self, dims: int, size: int, num_octave: int, seed: int = None):
+        super().__init__(size=size, seed=seed)
+        if num_octave < 2:
+            raise ValueError("The number of octave must be at least 2")
+        if self.size % pow(2, num_octave) != 0:
+            raise ValueError(f"The size of the noise must be a multiple of {pow(2, num_octave)}")
+        self.num_octave = num_octave
+        if dims == 1:
+            self.noise_generator = PerlinNoise1D
+        elif dims == 2:
+            self.noise_generator = PerlinNoise2D
+        elif dims == 3:
+            self.noise_generator = PerlinNoise3D
+        else:
+            raise ValueError("The dimension of the noise must be 1, 2 or 3")
+
+    def generate(self):
+        p_noise = self.noise_generator(size=self.size, grid_size=2, seed=self.seed)
+        p_noise.generate()
+        p_noise.normalize()
+        self.noise = p_noise.noise
+        amp = 1.
+        freq = 2
+        for _ in range(self.num_octave):
+            p_noise = self.noise_generator(size=self.size, grid_size=freq, seed=self.seed)
+            p_noise.generate()
+            p_noise.normalize()
+            p_noise.normalize()
+            self.noise += amp * p_noise.noise
+            amp *= 0.5
+            freq *= 2
+
+
+# endregion
+# region Worley noise
+
 class WorleyNoise1D(Noise):
     def __init__(self, size: int, nbr_control_point: int, seed: int = None):
         """
@@ -354,7 +393,10 @@ class WorleyNoise3D(Noise):
         self.noise = distances.min(axis=3)
 
 
-class SimplexNoise(Noise):
+# endregion
+# region Simplex noise
+
+class SimplexNoise2D(Noise):
     def __init__(self, size: int, seed: int = None):
         super().__init__(size=size, seed=seed)
         self.F = (math.sqrt(3) - 1) / 2
@@ -368,6 +410,8 @@ class SimplexNoise(Noise):
         ...
 
 
+# endregion
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley1d', 'worley2d', 'worley3d'],
@@ -376,6 +420,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--ncp', type=int, default=10)  # Number of control points for Worley noise
     parser.add_argument('--gs', type=int, default=10)  # Grid size for Perlin noise
+    parser.add_argument('--dims', type=int, default=2)  # Number of dimensions for Perlin octave noise
+    parser.add_argument('--numoct', type=int, default=2)  # Number of octaves for Perlin octave noise
+
     parser.add_argument('--save', type=bool, default=False)
     args = parser.parse_args()
     if args.noise == 'perlin1d':
@@ -384,6 +431,8 @@ if __name__ == '__main__':
         noise = PerlinNoise2D(size=args.size, grid_size=args.gs, seed=args.seed)
     elif args.noise == 'perlin3d':
         noise = PerlinNoise3D(size=args.size, grid_size=args.gs, seed=args.seed)
+    elif args.noise == 'octave':
+        noise = PerlinOctave(size=args.size, dims=args.dims, num_octave=args.numoct, seed=args.seed)
     elif args.noise == 'worley1d':
         noise = WorleyNoise1D(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
     elif args.noise == 'worley2d':
