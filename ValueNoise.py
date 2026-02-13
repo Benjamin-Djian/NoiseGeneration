@@ -1,28 +1,8 @@
 import argparse
 import math
-import random
-from typing import Collection
 
 import numpy as np
 from matplotlib import pyplot as plt, animation
-
-from Vector import vector_from_dots, generate_random_unit_vect
-
-
-def distance(pt1: Collection, pt2: Collection, p: int = 2) -> float:
-    """
-    Compute the Minkowski distance of order P between two points in any dimension.
-    :param pt1: Coordinates of the first point
-    :param pt2: Coordinates of the second point
-    :param p: Parameter of the norm. Defaults to 2 (Euclidean distance)
-    :return: The distance between the two points, using the p-norm
-    """
-    if isinstance(pt1, Collection) and isinstance(pt2, Collection):
-        if len(pt1) != len(pt2):
-            raise ValueError(f"The two points must have the same dimension, got {len(pt1)} and {len(pt2)} instead")
-        return sum([(c1 - c2) ** p for c1, c2 in zip(pt1, pt2)]) ** (1 / p)
-    else:
-        raise ValueError(f"The two points must be collections of numbers, got {type(pt1)} and {type(pt2)} instead")
 
 
 class Noise:
@@ -131,51 +111,32 @@ class PerlinNoise1D(Noise):
         # Number of pixels per grid cell
         self.pix_by_cell = int(size / grid_size)
 
-        # Grid creation: a 1D array of unit vectors of a random direction
-        self.grid = np.empty(grid_size + 1, dtype=object)
-        for i in range(grid_size + 1):
-            self.grid[i] = generate_random_unit_vect(dims=1, seed=self.seed + i if seed is not None else None)
+        # The grid is a 2D array of random vectors
+        self.grid = np.random.uniform(-1, 1, size=grid_size + 1)
 
         self.interpolate_fctn = lambda t, a, b: (b - a) * t + a
         # Fade function as defined by Ken Perlin.
         self.fade = lambda t: ((6 * t - 15) * t + 10) * t * t * t
 
-    def compute_dot_product(self, coord: int) -> list[float]:
-        """
-        :param coord: Coordinates of the point
-        :return: Dot product of offset vector with each corner of the grid
-        """
-        xf = coord - (coord % self.pix_by_cell)
-
-        corners: list[int] = [xf, xf + self.pix_by_cell]
-
-        output = []
-        for cx in corners:
-            # Create an offset vector for each corner
-            offset = vector_from_dots((coord,), (cx,))
-            # Dot product with the random vector of the grid
-            output.append(offset * self.grid[cx // self.pix_by_cell])
-
-        return output
-
-    def interpolate(self, coord: int, dot_products: list[float]) -> float:
-        """
-        :param coord: coordinate of the point to interpolate
-        :param dot_products: Dot products of the points with the 2 corners of its cell
-        :return: The interpolation (smoothed) of the 2 dot products of the given point
-        """
-        u = self.fade((coord % self.pix_by_cell) / self.pix_by_cell)
-
-        value = self.interpolate_fctn(u, dot_products[0], dot_products[1])
-        return value
-
-    def generate_pt(self, coord: int):
-        """Generate the value of the noise at a given coordinate"""
-        value = self.interpolate(coord, self.compute_dot_product(coord))
-        return value
-
     def generate(self):
-        self.noise = np.array([self.generate_pt(coord_x) for coord_x in range(self.size)])
+        x = np.arange(0, self.size, step=1)
+        x_grid = x // self.pix_by_cell  # Indices in the grid
+        # Coordinates inside the corresponding cell (offset vectors)
+        xf = (x % self.pix_by_cell) / self.pix_by_cell
+
+        # Gradient vectors at 4 corners
+        left = self.grid[x_grid]
+        right = self.grid[x_grid + 1]
+
+        # Dot products
+        dp_left = left * xf
+        dp_right = right * (xf - 1)
+
+        # Fade
+        u = self.fade(xf)
+
+        # Bilinear interpolation
+        self.noise = self.interpolate_fctn(u, dp_left, dp_right)
 
 
 class PerlinNoise2D(Noise):
@@ -190,64 +151,47 @@ class PerlinNoise2D(Noise):
             raise ValueError("grid_size must be a divisor of size")
         self.grid_size = grid_size
         # Number of pixels per grid cell
-        self.pix_by_cell = int(size / grid_size)
+        self.pix_by_cell: int = int(size / grid_size)
 
-        # Grid creation: a 2D array of unit vectors of a random direction
-        self.grid = np.empty((grid_size + 1, grid_size + 1), dtype=object)
-        for i in range(grid_size + 1):
-            for j in range(grid_size + 1):
-                seed = self.seed + i * grid_size + j if seed is not None else None
-                self.grid[i][j] = generate_random_unit_vect(dims=2, seed=seed)
+        # The grid is a 2D array of random vectors
+        self.grid = np.random.randn(grid_size + 1, grid_size + 1, 2)
+        # Normalize the vectors of the grid
+        self.grid /= np.linalg.norm(self.grid, axis=2, keepdims=True)
 
         self.interpolate_fctn = lambda t, a, b: (b - a) * t + a
         # Fade function as defined by Ken Perlin.
         self.fade = lambda t: ((6 * t - 15) * t + 10) * t * t * t
 
-    def compute_dot_product(self, coord: tuple[int, int]) -> list[float]:
-        """
-        :param coord: Coordinates of the point
-        :return: Dot product of offset vector with each corner of the grid
-        """
-        x, y = coord
-        xf, yf = (x - (x % self.pix_by_cell), y - (y % self.pix_by_cell))
-
-        corners: list[tuple[int, int]] = [(xf, yf),
-                                          (xf + self.pix_by_cell, yf),
-                                          (xf, yf + self.pix_by_cell),
-                                          (xf + self.pix_by_cell, yf + self.pix_by_cell)]
-
-        output = []
-        for cx, cy in corners:
-            # Create an offset vector for each corner
-            offset = vector_from_dots((x, y), (cx, cy))
-            # Dot product with the random vector of the grid
-            output.append(offset * self.grid[cx // self.pix_by_cell, cy // self.pix_by_cell])
-
-        return output
-
-    def interpolate(self, coord: tuple[int, int], dot_products: list[float]) -> float:
-        """
-        :param coord: coordinates of the point to interpolate
-        :param dot_products: Dot products of the points with the 4 corners of its cell
-        :return: The interpolation (smoothed) of the 4 dot products of the given point
-        """
-        x, y = coord
-        u = self.fade((x % self.pix_by_cell) / self.pix_by_cell)
-        v = self.fade((y % self.pix_by_cell) / self.pix_by_cell)
-
-        interpol_left = self.interpolate_fctn(u, dot_products[0], dot_products[1])
-        interpol_right = self.interpolate_fctn(u, dot_products[2], dot_products[3])
-        value = self.interpolate_fctn(v, interpol_left, interpol_right)
-        return value
-
-    def generate_pt(self, coord: tuple[int, int]):
-        """Generate the value of the noise at a given coordinate"""
-        value = self.interpolate(coord, self.compute_dot_product(coord))
-        return value
-
     def generate(self):
-        self.noise = np.array([[self.generate_pt((coord_x, coord_y)) for coord_x in range(self.size)]
-                               for coord_y in range(self.size)])
+        x = np.arange(0, self.size, step=1)
+        y = np.arange(0, self.size, step=1)
+        # real coordinates
+        X, Y = np.meshgrid(x, y)
+        # Cell coord where the points are located
+        x_grid, y_grid = X // self.pix_by_cell, Y // self.pix_by_cell
+        # Relative coordinates of the points inside the cell
+        xf, yf = (X % self.pix_by_cell) / self.pix_by_cell, (Y % self.pix_by_cell) / self.pix_by_cell
+
+        # Gradient vectors at 4 corners
+        top_left = self.grid[x_grid, y_grid]
+        bottom_left = self.grid[x_grid + 1, y_grid]
+        top_right = self.grid[x_grid, y_grid + 1]
+        bottom_right = self.grid[x_grid + 1, y_grid + 1]
+
+        # Dot products
+        dp_top_left = top_left[:, :, 0] * xf + top_left[:, :, 1] * yf
+        dp_bottom_left = bottom_left[:, :, 0] * (xf - 1) + bottom_left[:, :, 1] * yf
+        dp_top_right = top_right[:, :, 0] * xf + top_right[:, :, 1] * (yf - 1)
+        dp_bottom_right = bottom_right[:, :, 0] * (xf - 1) + bottom_right[:, :, 1] * (yf - 1)
+
+        # Fade
+        u = self.fade(xf)
+        v = self.fade(yf)
+
+        # Bilinear interpolation
+        interpol_left = self.interpolate_fctn(u, dp_top_left, dp_bottom_left)
+        interpol_right = self.interpolate_fctn(u, dp_top_right, dp_bottom_right)
+        self.noise = self.interpolate_fctn(v, interpol_left, interpol_right)
 
 
 class PerlinNoise3D(Noise):
@@ -261,122 +205,147 @@ class PerlinNoise3D(Noise):
         if size % grid_size != 0:
             raise ValueError("grid_size must be a divisor of size")
         self.grid_size = grid_size
+        # Number of pixels per grid cell
+        self.pix_by_cell = int(size / grid_size)
 
-        self.pix_by_cell = int(size / grid_size)  # Dimension of a cell of the grid
-
-        # Grid creation: a 3D array of unit vectors of a random direction
-        self.grid = np.empty((grid_size + 1, grid_size + 1, grid_size + 1), dtype=object)
-        for i in range(grid_size + 1):
-            for j in range(grid_size + 1):
-                for k in range(grid_size + 1):
-                    seed = self.seed + i * grid_size * grid_size + j * grid_size + k if seed is not None else None
-                    self.grid[i][j][k] = generate_random_unit_vect(dims=3, seed=seed)
+        # The grid is a 2D array of random vectors
+        self.grid = np.random.randn(grid_size + 1, grid_size + 1, grid_size + 1, 3)
+        # Normalize the vectors of the grid
+        self.grid /= np.linalg.norm(self.grid, axis=2, keepdims=True)
 
         self.interpolate_fctn = lambda t, a, b: (b - a) * t + a
         # Fade function as defined by Ken Perlin.
         self.fade = lambda t: ((6 * t - 15) * t + 10) * t * t * t
 
-    def compute_dot_product(self, coord: tuple[int, int, int]) -> list[float]:
-        """
-        :param coord: Coordinates of the point
-        :return: Dot product of offset vector with each corner of the grid
-        """
-        xf, yf, zf = list((c - (c % self.pix_by_cell) for c in coord))
+    def generate(self):
+        x = np.arange(0, self.size, step=1)
+        y = np.arange(0, self.size, step=1)
+        z = np.arange(0, self.size, step=1)
+        X, Y, Z = np.meshgrid(x, y, z)  # real coordinates
+        # Indices in the grid
+        x_grid, y_grid, z_grid = X // self.pix_by_cell, Y // self.pix_by_cell, Z // self.pix_by_cell
+        # Coordinates inside the corresponding cell (offset vectors)
+        xf, yf, zf = (X % self.pix_by_cell) / self.pix_by_cell, (Y % self.pix_by_cell) / self.pix_by_cell, (
+                Z % self.pix_by_cell) / self.pix_by_cell
 
-        corners: list[tuple[int, int, int]] = [(xf, yf, zf),
-                                               (xf + self.pix_by_cell, yf, zf),
-                                               (xf, yf + self.pix_by_cell, zf),
-                                               (xf + self.pix_by_cell, yf + self.pix_by_cell, zf),
-                                               (xf, yf, zf + self.pix_by_cell),
-                                               (xf + self.pix_by_cell, yf, zf + self.pix_by_cell),
-                                               (xf, yf + self.pix_by_cell, zf + self.pix_by_cell),
-                                               (xf + self.pix_by_cell, yf + self.pix_by_cell, zf + self.pix_by_cell)]
+        # Gradient vectors at 8 corners
+        top_left = self.grid[x_grid, y_grid, z_grid]
+        bottom_left = self.grid[x_grid + 1, y_grid, z_grid]
+        top_right = self.grid[x_grid, y_grid + 1, z_grid]
+        bottom_right = self.grid[x_grid + 1, y_grid + 1, z_grid]
+        top_left_up = self.grid[x_grid, y_grid, z_grid + 1]
+        bottom_left_up = self.grid[x_grid + 1, y_grid, z_grid + 1]
+        top_right_up = self.grid[x_grid, y_grid + 1, z_grid + 1]
+        bottom_right_up = self.grid[x_grid + 1, y_grid + 1, z_grid + 1]
 
-        output = []
-        for coord_corners in corners:
-            # Create an offset vector for each corner
-            offset = vector_from_dots(coord, coord_corners)
-            # Dot product with the random vector of the grid
-            output.append(offset * self.grid[*(c // self.pix_by_cell for c in coord_corners)])
+        # Dot products
+        dp_top_left = top_left[..., 0] * xf + top_left[..., 1] * yf + top_left[..., 2] * zf
+        dp_bottom_left = bottom_left[..., 0] * (xf - 1) + bottom_left[..., 1] * yf + bottom_left[..., 2] * zf
+        dp_top_right = top_right[..., 0] * xf + top_right[..., 1] * (yf - 1) + top_right[..., 2] * zf
+        dp_bottom_right = bottom_right[..., 0] * (xf - 1) + bottom_right[..., 1] * (yf - 1) + bottom_right[..., 2] * zf
+        dp_top_left_up = top_left_up[..., 0] * xf + top_left_up[..., 1] * yf + top_left_up[..., 2] * (zf - 1)
+        dp_bottom_left_up = bottom_left_up[..., 0] * (xf - 1) + bottom_left_up[..., 1] * yf + bottom_left_up[..., 2] * (
+                zf - 1)
+        dp_top_right_up = top_right_up[..., 0] * xf + top_right_up[..., 1] * (yf - 1) + top_right_up[..., 2] * (zf - 1)
+        dp_bottom_right_up = bottom_right_up[..., 0] * (xf - 1) + bottom_right_up[..., 1] * (yf - 1) + bottom_right_up[
+            ..., 2] * (zf - 1)
 
-        return output
+        # Fade
+        u = self.fade(xf)
+        v = self.fade(yf)
+        w = self.fade(zf)
 
-    def interpolate(self, coord: tuple[int, int, int], dot_products: list[float]) -> float:
-        x, y, z = coord
-        u = self.fade((x % self.pix_by_cell) / self.pix_by_cell)
-        v = self.fade((y % self.pix_by_cell) / self.pix_by_cell)
-        w = self.fade((z % self.pix_by_cell) / self.pix_by_cell)
-
-        interpol_x1 = self.interpolate_fctn(u, dot_products[0], dot_products[1])
-        interpol_x2 = self.interpolate_fctn(u, dot_products[2], dot_products[3])
-        interpol_x3 = self.interpolate_fctn(u, dot_products[4], dot_products[5])
-        interpol_x4 = self.interpolate_fctn(u, dot_products[6], dot_products[7])
+        # Bilinear interpolation
+        interpol_x1 = self.interpolate_fctn(u, dp_top_left, dp_bottom_left)
+        interpol_x2 = self.interpolate_fctn(u, dp_top_right, dp_bottom_right)
+        interpol_x3 = self.interpolate_fctn(u, dp_top_left_up, dp_bottom_left_up)
+        interpol_x4 = self.interpolate_fctn(u, dp_top_right_up, dp_bottom_right_up)
         interpol_y1 = self.interpolate_fctn(v, interpol_x1, interpol_x2)
         interpol_y2 = self.interpolate_fctn(v, interpol_x3, interpol_x4)
-        value = self.interpolate_fctn(w, interpol_y1, interpol_y2)
-        return value
-
-    def generate_pt(self, coord: tuple[int, int, int]):
-        """Generate the value of the noise at a given coordinate"""
-        value = self.interpolate(coord, self.compute_dot_product(coord))
-        return value
-
-    def generate(self):
-        self.noise = np.array([[[self.generate_pt((coord_x, coord_y, coord_z))
-                                 for coord_x in range(self.size)]
-                                for coord_y in range(self.size)]
-                               for coord_z in range(self.size)])
+        self.noise = self.interpolate_fctn(w, interpol_y1, interpol_y2)
 
 
-class WorleyNoise(Noise):
-    def __init__(self, size: int, dims: int, nbr_control_point: int, seed: int = None):
+class WorleyNoise1D(Noise):
+    def __init__(self, size: int, nbr_control_point: int, seed: int = None):
         """
         :param size: The size of the noise to generate (in pixel)
         :param nbr_control_point: Number of control points to use to generate the noise.
-        :param dims: Number of dimensions of the noise to generate (must be 1,2 or 3)
         :param seed: To make generation reproducible
         """
         super().__init__(size=size)
-        self.control_points: list[tuple[int, int]] = []
-        self.dims = dims
-        self.generate_control_points(dims, nbr_control_point, seed=seed)
-
-    def generate_control_points(self, dims: int, nbr_control_point: int, seed: int = None):
-        """Generate nbr_control_point random control points"""
-        random.seed(seed)
-        for _ in range(nbr_control_point):
-            dim_control_point = []
-            for d in range(dims):
-                random_d = random.randint(0, self.size)
-                dim_control_point.append(random_d)
-            self.control_points.append(tuple(dim_control_point))
-
-    def get_closer_control_point(self, coord) -> float:
-        """Return the distance to the closest control point"""
-        closest_dist = np.inf
-        for control_p in self.control_points:
-            dist = distance(coord, control_p)
-            if dist < closest_dist:
-                closest_dist = dist
-
-        return closest_dist
+        np.random.seed(seed)
+        self.control_points = np.random.randint(0, self.size + 1, size=nbr_control_point)
 
     def generate(self):
-        if self.dims == 1:
-            self.noise = np.array([self.get_closer_control_point((c,)) for c in range(self.size)])
-        elif self.dims == 2:
-            self.noise = np.array(
-                [[self.get_closer_control_point((coord_x, coord_y))
-                  for coord_x in range(self.size)]
-                 for coord_y in range(self.size)])
-        elif self.dims == 3:
-            self.noise = np.array(
-                [[[self.get_closer_control_point((coord_x, coord_y, coord_z))
-                   for coord_x in range(self.size)]
-                  for coord_y in range(self.size)]
-                 for coord_z in range(self.size)])
-        else:
-            raise ValueError(f"Cannot generate noise of dimension {self.dims}")
+        """Generate Worley noise grid"""
+        # Create coordinates
+        coords = np.arange(self.size)
+        # Compute the difference between each control point and each coordinate
+        diff = np.subtract.outer(coords, self.control_points)
+        # We consider the distance to be the absolute value of the difference
+        distances = np.abs(diff)
+
+        self.noise = distances.min(axis=1)
+
+
+class WorleyNoise2D(Noise):
+    def __init__(self, size: int, nbr_control_point: int, seed: int = None):
+        """
+        :param size: The size of the noise to generate (in pixel)
+        :param nbr_control_point: Number of control points to use to generate the noise.
+        :param seed: To make generation reproducible
+        """
+        super().__init__(size=size)
+        np.random.seed(seed)
+        self.control_points = np.random.randint(0, self.size + 1, size=(nbr_control_point, 2))
+
+    def generate(self):
+        """Generate Worley noise grid"""
+        # Create coordinates
+        x = np.arange(self.size)
+        y = np.arange(self.size)
+        xx, yy = np.meshgrid(x, y)
+
+        # Compute the difference between each control point and each coordinate
+        dx = np.subtract.outer(xx, self.control_points[:, 0])
+        dy = np.subtract.outer(yy, self.control_points[:, 1])
+
+        # Considering Euclidean distance
+        distances = np.sqrt(dx ** 2 + dy ** 2)
+
+        # Select only the minimum distance
+        self.noise = distances.min(axis=2)
+
+
+class WorleyNoise3D(Noise):
+    def __init__(self, size: int, nbr_control_point: int, seed: int = None):
+        """
+        :param size: The size of the noise to generate (in pixel)
+        :param nbr_control_point: Number of control points to use to generate the noise.
+        :param seed: To make generation reproducible
+        """
+        super().__init__(size=size)
+        np.random.seed(seed)
+        self.control_points = np.random.randint(0, self.size + 1, size=(nbr_control_point, 3))
+
+    def generate(self):
+        """Generate Worley noise grid"""
+        # Create coordinates
+        x = np.arange(self.size)
+        y = np.arange(self.size)
+        z = np.arange(self.size)
+        xx, yy, zz = np.meshgrid(x, y, z)
+
+        # Compute the difference between each control point and each coordinate
+        dx = np.subtract.outer(xx, self.control_points[:, 0])
+        dy = np.subtract.outer(yy, self.control_points[:, 1])
+        dz = np.subtract.outer(zz, self.control_points[:, 2])
+
+        # Considering Euclidean distance
+        distances = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+
+        # Select only the minimum distance
+        self.noise = distances.min(axis=3)
 
 
 class SimplexNoise(Noise):
@@ -409,11 +378,11 @@ if __name__ == '__main__':
     elif args.noise == 'perlin3d':
         noise = PerlinNoise3D(size=args.size, grid_size=args.gs, seed=args.seed)
     elif args.noise == 'worley1d':
-        noise = WorleyNoise(size=args.size, dims=1, nbr_control_point=args.ncp, seed=args.seed)
+        noise = WorleyNoise1D(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
     elif args.noise == 'worley2d':
-        noise = WorleyNoise(size=args.size, dims=2, nbr_control_point=args.ncp, seed=args.seed)
+        noise = WorleyNoise2D(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
     elif args.noise == 'worley3d':
-        noise = WorleyNoise(size=args.size, dims=3, nbr_control_point=args.ncp, seed=args.seed)
+        noise = WorleyNoise3D(size=args.size, nbr_control_point=args.ncp, seed=args.seed)
     else:
         raise ValueError(f"Noise type {args.noise} not supported")
 

@@ -46,4 +46,4 @@ Example of Worley Noise generation in 2D and 3D :
 # Next Steps :
 
 - [ ] Unit tests and logging
-- [ ] Code optimization
+- [x] Optimized Worley and Perlin noise using numpy
