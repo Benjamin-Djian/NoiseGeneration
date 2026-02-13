@@ -73,29 +73,30 @@ class Noise:
     def generate(self):
         raise NotImplementedError
 
-    def show(self, cmap='gray', savefig: bool = False):
+    def show(self, cmap='viridis', savefig: bool = False):
         """Show the generated noise with matplotlib"""
         if self.noise is None:
             raise ValueError("Noise not generated yet")
         if isinstance(self.noise, np.ndarray):
-            fig = plt.figure()
+            dpi = 100
+            fig, ax = plt.subplots(figsize=(12.8, 9.6), dpi=dpi)
+            ax.set_xticks([])
+            ax.set_yticks([])
             if self.noise.ndim == 1:
                 plt.plot(self.noise)
                 if savefig:
-                    plt.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi="figure")
+                    fig.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi=dpi)
                 plt.show()
             elif self.noise.ndim == 2:
                 plt.imshow(self.noise, cmap=cmap)
-                plt.xticks([]), plt.yticks([])
                 if savefig:
-                    plt.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi="figure")
+                    fig.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi=dpi)
                 plt.show()
             elif self.noise.ndim == 3:
-                images = [[plt.imshow(layer, cmap='gray', animated=True)] for layer in self.noise]
+                images = [[ax.imshow(layer, cmap=cmap, animated=True)] for layer in self.noise]
                 ani = animation.ArtistAnimation(fig, images, interval=50, blit=True)
-                plt.xticks([]), plt.yticks([])
                 if savefig:
-                    ani.save(filename=f"{self.size}px_{self.__class__.__name__}.gif")
+                    ani.save(filename=f"{self.size}px_{self.__class__.__name__}.gif", dpi=dpi)
                 plt.show()
             else:
                 raise ValueError(f"Representation of {self.noise.ndim}-dimensional noise not supported")
