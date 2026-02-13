@@ -73,7 +73,7 @@ class Noise:
     def generate(self):
         raise NotImplementedError
 
-    def show(self, cmap='gray'):
+    def show(self, cmap='gray', savefig: bool = False):
         """Show the generated noise with matplotlib"""
         if self.noise is None:
             raise ValueError("Noise not generated yet")
@@ -81,15 +81,21 @@ class Noise:
             fig = plt.figure()
             if self.noise.ndim == 1:
                 plt.plot(self.noise)
+                if savefig:
+                    plt.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi="figure")
                 plt.show()
             elif self.noise.ndim == 2:
                 plt.imshow(self.noise, cmap=cmap)
                 plt.xticks([]), plt.yticks([])
+                if savefig:
+                    plt.savefig(fname=f"{self.size}px_{self.__class__.__name__}.png", dpi="figure")
                 plt.show()
             elif self.noise.ndim == 3:
                 images = [[plt.imshow(layer, cmap='gray', animated=True)] for layer in self.noise]
                 ani = animation.ArtistAnimation(fig, images, interval=50, blit=True)
                 plt.xticks([]), plt.yticks([])
+                if savefig:
+                    ani.save(filename=f"{self.size}px_{self.__class__.__name__}.gif")
                 plt.show()
             else:
                 raise ValueError(f"Representation of {self.noise.ndim}-dimensional noise not supported")
@@ -370,6 +376,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--ncp', type=int, default=10)  # Number of control points for Worley noise
     parser.add_argument('--gs', type=int, default=10)  # Grid size for Perlin noise
+    parser.add_argument('--save', type=bool, default=False)
     args = parser.parse_args()
     if args.noise == 'perlin1d':
         noise = PerlinNoise1D(size=args.size, grid_size=args.gs, seed=args.seed)
@@ -387,4 +394,4 @@ if __name__ == '__main__':
         raise ValueError(f"Noise type {args.noise} not supported")
 
     noise.generate()
-    noise.show()
+    noise.show(savefig=args.save)
