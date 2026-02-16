@@ -14,11 +14,13 @@ The main steps of his algorithm are :
 - [x] Perlin noise 2D - class PerlinNoise2D
 - [x] Perlin noise 3D - class PerlinNoise3D
 - [x] [Perlin noise with octaves](https://rtouti.github.io/graphics/perlin-noise-algorithm)
+- [ ] [Ridge noise](https://thebookofshaders.com/13/)
+- [ ] ["Cloud Noise"](https://thebookofshaders.com/13/)
 
 Example of Perlin Noise generation in 2D and 3D:
 
-<img src="images_example/100px_PerlinNoise2D_2D.png" width="320" height="240"/>
-<img src="images_example/100px_PerlinNoise3D_3D.gif" width="320" height="240"/>
+<img src="images_example/100px_PerlinNoise2D_2D.png" width="320" height="240" alt="Perlin Noise 2D"/>
+<img src="images_example/100px_PerlinNoise3D_3D.gif" width="320" height="240" alt="Perlin Noise 3D"/>
 
 ## [Worley noise](https://en.wikipedia.org/wiki/Worley_noise)
 
@@ -34,16 +36,16 @@ The main steps of his algorithm are :
 
 Example of Worley Noise generation in 2D and 3D :
 
-<img src="images_example/100px_WorleyNoise_2D.png" width="320" height="240"/>
-<img src="images_example/100px_WorleyNoise_3D.gif" width="320" height="240"/>
+<img src="images_example/100px_WorleyNoise_2D.png" width="320" height="240" alt="Worley noise 2D"/>
+<img src="images_example/100px_WorleyNoise_3D.gif" width="320" height="240" alt="Worley noise 3D"/>
 
 
 ## [Simplex noise](https://en.wikipedia.org/wiki/Simplex_noise)
-- [ ] Simplex Noise 1D - In progress
-- [ ] Simplex Noise 2D
+- [ ] [Simplex Noise 2D](https://thebookofshaders.com/11/)
 - [ ] Simplex Noise 3D
 
 # Next Steps :
 
 - [ ] Unit tests and logging
+- [ ] Gabor noise?
 - [x] Optimized Worley and Perlin noise using numpy
