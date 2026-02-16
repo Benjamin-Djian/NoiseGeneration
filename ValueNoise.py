@@ -415,7 +415,7 @@ class SimplexNoise2D(Noise):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley1d', 'worley2d', 'worley3d'],
+    parser.add_argument('--noise', choices=['perlin1d', 'perlin2d', 'perlin3d', 'worley1d', 'worley2d', 'worley3d', 'octave'],
                         default='perlin2d')
     parser.add_argument('--size', type=int, default=100)
     parser.add_argument('--seed', type=int, default=42)
