@@ -33,6 +33,8 @@ class Noise:
 
     def __add__(self, other, normalize=True):
         """Add two noises together"""
+        if self.noise is None or other.noise is None:
+            raise ValueError("Cannot add noise that have not been generated yet")
         if self.noise.shape != other.noise.shape:
             raise ValueError(f"Cannot add two noises of different dimensions {self.noise.ndim} and {other.noise.ndim}")
         if normalize:
@@ -44,6 +46,8 @@ class Noise:
 
     def __sub__(self, other, normalize=True):
         """Subtract two noises"""
+        if self.noise is None or other.noise is None:
+            raise ValueError("Cannot subtract noise that have not been generated yet")
         if self.noise.shape != other.noise.shape:
             raise ValueError(
                 f"Cannot subtract two noises of different dimensions {self.noise.ndim} and {other.noise.ndim}")
@@ -56,6 +60,9 @@ class Noise:
 
     def __mul__(self, other, normalize=True):
         """Multiply two noises"""
+        if self.noise is None or other.noise is None:
+            raise ValueError("Cannot multiply noise that have not been generated yet")
+
         if self.noise.shape != other.noise.shape:
             raise ValueError(
                 f"Cannot multiply two noises of different dimensions {self.noise.ndim} and {other.noise.ndim}")
@@ -121,6 +128,7 @@ class PerlinNoise1D(Noise):
         self.pix_by_cell = int(size / grid_size)
 
         # The grid is a 2D array of random vectors
+        np.random.seed(seed)
         self.grid = np.random.uniform(-1, 1, size=grid_size + 1)
 
         self.interpolate_fctn = lambda t, a, b: (b - a) * t + a
@@ -163,6 +171,7 @@ class PerlinNoise2D(Noise):
         self.pix_by_cell: int = int(size / grid_size)
 
         # The grid is a 2D array of random vectors
+        np.random.seed(seed)
         self.grid = np.random.randn(grid_size + 1, grid_size + 1, 2)
         # Normalize the vectors of the grid
         self.grid /= np.linalg.norm(self.grid, axis=2, keepdims=True)
@@ -218,6 +227,7 @@ class PerlinNoise3D(Noise):
         self.pix_by_cell = int(size / grid_size)
 
         # The grid is a 2D array of random vectors
+        np.random.seed(seed)
         self.grid = np.random.randn(grid_size + 1, grid_size + 1, grid_size + 1, 3)
         # Normalize the vectors of the grid
         self.grid /= np.linalg.norm(self.grid, axis=2, keepdims=True)
